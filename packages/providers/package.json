@@ -1,0 +1,23 @@
+{
+  "name": "@studio/providers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Provider adapter interfaces + implementations (scriptwriter now; TTS/image/storage land in Phase 2).",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@studio/domain": "*",
+    "@studio/niches": "*",
+    "zod": "^4.0.5"
+  }
+}
