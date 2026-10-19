@@ -1,0 +1,15 @@
+# Normalize all text files to LF in the repository; checkouts on Windows
+# working areas stay LF so line endings never show up as spurious diffs.
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets (Phase 2 media candidates)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.mp4 binary
+*.mp3 binary
+*.wav binary
