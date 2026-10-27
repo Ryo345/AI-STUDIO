@@ -24,6 +24,9 @@ coverage/
 .DS_Store
 Thumbs.db
 
+# supabase CLI link state (machine-local: project ref, pooler URL)
+supabase/.temp/
+
 # worker scratch (Phase 2 render temp space)
 storage/
 tmp/

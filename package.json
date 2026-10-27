@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:int": "vitest run --config vitest.int.config.ts",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev": "node --env-file=.env node_modules/next/dist/bin/next dev apps/web"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
