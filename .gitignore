@@ -14,6 +14,8 @@ build/
 .env
 .env.*
 !.env.example
+# direnv would carry pasted keys; never commit it
+.envrc
 
 # test + tooling
 coverage/
@@ -30,3 +32,6 @@ supabase/.temp/
 # worker scratch (Phase 2 render temp space)
 storage/
 tmp/
+
+# claude code — machine-local permission grants (never commit)
+.claude/settings.local.json
