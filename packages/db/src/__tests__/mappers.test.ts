@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   mapJobRow,
   mapProjectRow,
+  mapRowsResilient,
   mapSceneRow,
   monthWindowStart,
   RowMappingError,
@@ -102,5 +103,48 @@ describe('monthWindowStart', () => {
   it('computes the first day of the (months-1)-ago month in UTC', () => {
     expect(monthWindowStart(new Date('2026-01-15T12:00:00Z'), 12)).toBe('2025-02-01T00:00:00.000Z');
     expect(monthWindowStart(new Date('2026-01-15T12:00:00Z'), 1)).toBe('2026-01-01T00:00:00.000Z');
+  });
+});
+
+describe('mapRowsResilient', () => {
+  const goodRow: DbRow = { ...projectRow };
+  const junkRow: DbRow = { ...projectRow, id: 'junk', status: 'vaporized' };
+
+  it('maps every valid row', () => {
+    const rows = mapRowsResilient('projects', mapProjectRow, [goodRow, { ...goodRow }]);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.niche).toBe('horror');
+  });
+
+  it('skips a junk row instead of bricking the whole listing', () => {
+    const rows = mapRowsResilient('projects', mapProjectRow, [goodRow, junkRow, { ...goodRow }]);
+    expect(rows).toHaveLength(2);
+    expect(rows.map((row) => row.id)).not.toContain('junk');
+  });
+
+  it('warns with the row id but never echoes the row contents', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      mapRowsResilient('projects', mapProjectRow, [junkRow]);
+      expect(warn).toHaveBeenCalledTimes(1);
+      const message = String(warn.mock.calls[0]?.[0] ?? '');
+      expect(message).toContain('junk');
+      // The offending value and the row's user text must not reach the log.
+      expect(message).not.toContain('vaporized');
+      expect(message).not.toContain('The Backrooms');
+      // It DOES say which field failed, so the row can be found.
+      expect(message).toContain('status');
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('lets a non-mapping error escape (it is a bug, not bad data)', () => {
+    const boom = new Error('kaboom');
+    expect(() =>
+      mapRowsResilient('projects', () => {
+        throw boom;
+      }, [goodRow]),
+    ).toThrow(boom);
   });
 });

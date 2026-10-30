@@ -37,6 +37,62 @@ function map<T>(
   }
 }
 
+/**
+ * LIST-endpoint resilience: map every row, skipping (with a loud warning)
+ * any row that fails DTO validation instead of throwing — one junk row
+// (e.g. a hand-written config={"x":1} inserted via PostgREST) must not
+ * brick a whole workspace listing forever. Deliberately NOT used on
+ * single-row paths (getProjectRow, getProjectScript, patch/create returns):
+ * there, silent row-hiding would be worse than a loud 500, so those keep
+ * throwing RowMappingError.
+ */
+export function mapRowsResilient<T>(
+  table: string,
+  mapRow: (row: DbRow) => T,
+  rows: DbRow[],
+): T[] {
+  const out: T[] = [];
+  for (const row of rows) {
+    try {
+      out.push(mapRow(row));
+    } catch (cause) {
+      if (!(cause instanceof RowMappingError)) throw cause;
+      console.warn(
+        `[db] skipping one ${table} row (id=${String(row['id'] ?? 'unknown')}): ${describeFailure(cause.cause)}`,
+      );
+    }
+  }
+  return out;
+}
+
+/**
+ * Describes a validation failure by PATH AND CODE ONLY.
+ *
+ * zod's issue objects carry the offending `input`, and ZodError.message is
+ * the JSON of the whole issue array — logging it verbatim would copy user
+ * text (a topic, a title, a jsonb config) into the server log. The row id
+ * plus the failing paths are enough to find the offending row.
+ */
+function describeFailure(cause: unknown): string {
+  if (typeof cause === 'object' && cause !== null && 'issues' in cause) {
+    const issues = (cause as { issues: unknown }).issues;
+    if (Array.isArray(issues)) {
+      const described = issues.map((issue) => {
+        const path = Array.isArray((issue as { path?: unknown }).path)
+          ? (issue as { path: unknown[] }).path.join('.')
+          : '';
+        const code =
+          typeof (issue as { code?: unknown }).code === 'string'
+            ? (issue as { code: string }).code
+            : 'invalid';
+        return path ? `${path}: ${code}` : code;
+      });
+      if (described.length > 0) return described.join('; ');
+    }
+  }
+  return cause instanceof Error ? cause.message : 'unknown validation failure';
+}
+
 export function mapProjectRow(row: DbRow): ProjectDTO {
   return map('projects', (v) => ProjectDTOSchema.parse(v), {
     id: row['id'],

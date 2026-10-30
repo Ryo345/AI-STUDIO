@@ -12,6 +12,10 @@ import type { DbConfig } from './config.js';
 //     raw table writes against user data.
 //   * The service key is never referenced outside server processes; the
 //     browser bundle only ever sees the anon key.
+//
+// createServiceClient is reachable ONLY through the './server' subpath
+// ('@studio/db/server') — the root index deliberately does not re-export
+// it, so nothing importing '@studio/db' can build an RLS-bypassing client.
 
 /** Any Supabase client — user-session (RLS-enforced) or service (worker). */
 export type StudioDbClient = SupabaseClient;

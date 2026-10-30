@@ -4,21 +4,26 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ApiError, type GeneratedScript } from '@studio/domain';
 
 import {
-  integrationTestEnvAvailable,
   appendJobEvent,
   claimJobs,
   completeScriptGeneration,
-  createServiceClient,
   heartbeatJob,
   jobFailed,
   listJobEvents,
-  loadDbConfig,
   reclaimStaleJobs,
   enqueueScriptGeneration,
   requestJobCancel,
   reorderScenes,
   retryJob,
 } from '../index.js';
+// The service tier (service-key env loader + the RLS-bypassing client
+// factory) lives behind the '@studio/db/server' subpath, not the root
+// index — the integration suite needs it, the web app must never import it.
+import {
+  integrationTestEnvAvailable,
+  createServiceClient,
+  loadDbConfig,
+} from '../server.js';
 
 // GATED integration suite — runs ONLY with INT=1 plus real Supabase env in
 // .env (see docs/supabase-setup.md): `npm run test:int`. Creates throwaway
