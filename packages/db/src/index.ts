@@ -27,6 +27,7 @@ export * from './queries/projects.js';
 export * from './queries/script.js';
 export * from './queries/jobs.js';
 export * from './queries/usage.js';
+export * from './queries/workspaces.js';
 
 export {
   RpcError,
