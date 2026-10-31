@@ -1,0 +1,23 @@
+{
+  "name": "@studio/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Queue poller + scriptwriter pipeline. The only process holding provider keys and the service role key; all job mutation goes through SECURITY DEFINER RPCs.",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@studio/db": "*",
+    "@studio/domain": "*",
+    "@studio/niches": "*",
+    "@studio/pipeline": "*",
+    "@studio/providers": "*",
+    "@studio/queue-core": "*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}

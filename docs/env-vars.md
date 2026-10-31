@@ -47,6 +47,7 @@ vice versa.
 | --- | --- |
 | `ANTHROPIC_API_KEY` | API key |
 | `ANTHROPIC_MODEL` | Model id from the provider's current model list — deliberately not hardcoded anywhere |
+| `ANTHROPIC_BASE_URL` | Optional override (default `https://api.anthropic.com`) — for proxies/gateways speaking the Messages API |
 
 ### OpenAI-compatible (when `SCRIPTWRITER_PROVIDER=openai-compatible`)
 

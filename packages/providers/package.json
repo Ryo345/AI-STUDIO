@@ -18,6 +18,7 @@
   "dependencies": {
     "@studio/domain": "*",
     "@studio/niches": "*",
+    "@studio/pipeline": "*",
     "zod": "^4.0.5"
   }
 }
