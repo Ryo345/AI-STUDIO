@@ -3,8 +3,12 @@ import {
   type JobDTO,
   JobEventDTOSchema,
   type JobEventDTO,
+  ModelAssignmentDTOSchema,
+  type ModelAssignmentDTO,
   ProjectDTOSchema,
   type ProjectDTO,
+  ProviderConnectionDTOSchema,
+  type ProviderConnectionDTO,
   SceneDTOSchema,
   type SceneDTO,
   ScriptVersionDTOSchema,
@@ -158,5 +162,39 @@ export function mapJobEventRow(row: DbRow): JobEventDTO {
     kind: row['kind'],
     detail: row['detail'],
     at: row['at'],
+  });
+}
+
+// ── BYOK (0006) ──────────────────────────────────────────────────────────
+// mapProviderConnectionRow NEVER maps a `credential` column: rows come from
+// column-restricted selects, and the DTO schema would reject the extra key
+// anyway. Plaintext keys exist only inside encrypt/decrypt call frames.
+
+export function mapProviderConnectionRow(row: DbRow): ProviderConnectionDTO {
+  return map('provider_connections', (v) => ProviderConnectionDTOSchema.parse(v), {
+    id: row['id'],
+    workspaceId: row['workspace_id'],
+    createdBy: row['created_by'],
+    providerId: row['provider_id'],
+    baseUrl: row['base_url'],
+    keyHint: row['key_hint'],
+    status: row['status'],
+    lastTestedAt: row['last_tested_at'],
+    lastTestError: row['last_test_error'],
+    createdAt: row['created_at'],
+    updatedAt: row['updated_at'],
+  });
+}
+
+export function mapModelAssignmentRow(row: DbRow): ModelAssignmentDTO {
+  return map('model_assignments', (v) => ModelAssignmentDTOSchema.parse(v), {
+    id: row['id'],
+    workspaceId: row['workspace_id'],
+    task: row['task'],
+    providerId: row['provider_id'],
+    model: row['model'],
+    settings: row['settings'],
+    createdAt: row['created_at'],
+    updatedAt: row['updated_at'],
   });
 }

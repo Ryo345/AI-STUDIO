@@ -16,7 +16,6 @@
 import type { JobDTO, ProjectConfig, ScriptGenerateResult, ScriptProvenance } from '@studio/domain';
 import { ProjectConfigSchema } from '@studio/domain';
 import { appendJobEvent, heartbeatJob, jobFailed, completeScriptGeneration } from '@studio/db';
-import type { ScriptwriterAdapter } from '@studio/providers';
 import { ProviderCallError } from '@studio/providers';
 import { HEARTBEAT_INTERVAL_MS } from '@studio/queue-core';
 import { resolveNiche } from '@studio/niches';
@@ -24,14 +23,14 @@ import { resolveNiche } from '@studio/niches';
 import type { StudioDbClient } from '@studio/db/server';
 
 import { classifyFailure } from './errors.js';
+import { resolveJobAdapter, type AdapterResolutionDeps } from './adapter-resolution.js';
 
-export const PROCESS_VERSION = '0.1.0';
+export const PROCESS_VERSION = '0.2.0';
 
 export type WorkerLog = (message: string, detail?: Record<string, unknown>) => void;
 
-export interface ProcessDeps {
+export interface ProcessDeps extends AdapterResolutionDeps {
   db: StudioDbClient;
-  adapter: ScriptwriterAdapter;
   workerId: string;
   log: WorkerLog;
 }
@@ -44,7 +43,7 @@ interface ScriptGeneratePayload {
 }
 
 export async function processJob(deps: ProcessDeps, job: JobDTO): Promise<ProcessOutcome> {
-  const { db, adapter, workerId, log } = deps;
+  const { db, workerId, log } = deps;
   const jobId = job.id;
 
   // ── Phase 1: gather inputs (no heartbeat needed — reads are fast) ────
@@ -101,7 +100,21 @@ export async function processJob(deps: ProcessDeps, job: JobDTO): Promise<Proces
   }
   const config: ProjectConfig = parsedConfig.data;
 
-  // ── Phase 2: generate under the heartbeat loop ────────────────────────
+  // ── Phase 2: resolve the router → adapter, then generate under the
+  //    heartbeat loop ────────────────────────────────────────────────────
+
+  let adapter;
+  try {
+    adapter = (await resolveJobAdapter(deps, job)).adapter;
+  } catch (error) {
+    // ProviderConfigError (missing connection / failed test / undecryptable
+    // key) is NON-retryable — retries cannot conjure a key. DB-read
+    // ProviderCallErrors stay retryable via classifyFailure.
+    const failure = classifyFailure(error);
+    log('adapter resolution failed', { jobId, code: failure.code, retryable: failure.retryable, error: failure.message });
+    await settleFailure(deps, jobId, failure);
+    return 'failed';
+  }
 
   await appendJobEvent(db, jobId, workerId, 'script_generate_started', {
     providerId: adapter.id,

@@ -7,14 +7,18 @@ import { randomBytes } from 'node:crypto';
 import { hostname } from 'node:os';
 
 import { createServiceClient, loadDbConfig } from '@studio/db/server';
-import { resolveScriptwriter } from '@studio/providers';
+import { loadCredentialEncryptionKey, providerTimeoutMs, resolveScriptwriter } from '@studio/providers';
 
 import { loadWorkerConfig } from './config.js';
 import { runWorker } from './run.js';
 
 const config = loadWorkerConfig(process.env);
 const db = createServiceClient(loadDbConfig(process.env));
-const adapter = resolveScriptwriter(process.env);
+// Env fallback (mock in dev) — used only when a workspace has no model
+// assignment for the job's task. BYOK workspaces resolve per job.
+const fallbackAdapter = resolveScriptwriter(process.env);
+// Required unconditionally: BYOK connections cannot be decrypted without it.
+const encryptionKey = loadCredentialEncryptionKey(process.env);
 
 // Identifies this worker in locked_by / job events: host + pid + a short
 // random suffix so two workers on the same host never share an identity.
@@ -23,7 +27,9 @@ const workerId = `${hostname()}:${process.pid}:${randomBytes(4).toString('hex')}
 await runWorker({
   config,
   db,
-  adapter,
+  fallback: fallbackAdapter,
+  encryptionKey,
+  timeoutMs: providerTimeoutMs(process.env),
   workerId,
   log: (message, detail) => {
     const suffix = detail ? ` ${JSON.stringify(detail)}` : '';

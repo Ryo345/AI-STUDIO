@@ -5,7 +5,7 @@
 // max_completion_tokens); the prompt contract and the request timeout bound
 // the output instead.
 
-import type { GeneratedScript, ScriptProvenance } from '@studio/domain';
+import type { GeneratedScript, ScriptProvenance, ScriptwriterProviderId } from '@studio/domain';
 import { buildScriptPrompt } from '@studio/pipeline';
 
 import { asOptionalInt, buildPromptInput, normalizeProviderText } from './common.js';
@@ -22,7 +22,9 @@ export interface OpenAICompatibleConfig {
 }
 
 export class OpenAICompatibleScriptwriter implements ScriptwriterAdapter {
-  readonly id = 'openai-compatible' as const;
+  // Typed to the domain enum, not the literal: NIM (nvidia-nim.ts) extends
+  // this class and narrows id — the adapter registry keys on ScriptwriterProviderId.
+  readonly id: ScriptwriterProviderId = 'openai-compatible';
   readonly isMock = false;
 
   constructor(private readonly config: OpenAICompatibleConfig) {}
@@ -62,7 +64,7 @@ export class OpenAICompatibleScriptwriter implements ScriptwriterAdapter {
       ? { inputTokens: usage?.inputTokens, outputTokens: usage?.outputTokens }
       : {};
     const provenance: ScriptProvenance = {
-      providerId: 'openai-compatible',
+      providerId: this.id,
       model: this.config.model,
       isMock: false,
       // No seed parameter on the wire; a fresh id keeps provenance honest.

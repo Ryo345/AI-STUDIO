@@ -43,7 +43,11 @@ export async function runWorker(deps: WorkerDeps): Promise<void> {
     }
   };
 
-  log(`worker ${workerId} booting`, { provider: deps.adapter.id, isMock: deps.adapter.isMock, ...config });
+  log(`worker ${workerId} booting`, {
+    fallbackProvider: deps.fallback.id,
+    fallbackIsMock: deps.fallback.isMock,
+    ...config,
+  });
   await reclaim('boot');
 
   const reclaimTimer = setInterval(() => {

@@ -53,6 +53,42 @@ export async function postJsonForJson(url: string, opts: HttpJsonOptions): Promi
   }
 }
 
+/** GET JSON (model catalogs, health probes) with the same classification as postJsonForJson. */
+export async function getJsonForJson(
+  url: string,
+  opts: { timeoutMs: number; signal: AbortSignal; headers: Record<string, string> },
+): Promise<unknown> {
+  const timeoutSignal = AbortSignal.timeout(opts.timeoutMs);
+  const signal = 'any' in AbortSignal ? AbortSignal.any([opts.signal, timeoutSignal]) : opts.signal;
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'GET',
+      headers: { accept: 'application/json', ...opts.headers },
+      signal,
+    });
+  } catch (error) {
+    throw classifyNetworkError(error, opts.timeoutMs);
+  }
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    const snippet = text.replace(/\s+/g, ' ').slice(0, 200);
+    throw new ProviderCallError(
+      `provider responded ${response.status}${snippet ? `: ${snippet}` : ''}`,
+      `http_${response.status}`,
+      RETRYABLE_STATUS.has(response.status) || response.status >= 500,
+    );
+  }
+
+  try {
+    return await response.json();
+  } catch {
+    throw new ProviderCallError('provider returned malformed JSON', 'invalid_response', true);
+  }
+}
+
 function classifyNetworkError(error: unknown, timeoutMs: number): ProviderCallError {
   if (error instanceof ProviderCallError) return error;
   const isAbort = error instanceof Error && error.name === 'AbortError';

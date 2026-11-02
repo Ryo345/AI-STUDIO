@@ -22,9 +22,36 @@ export {
   type JobType,
   ScriptwriterProviderIdSchema,
   type ScriptwriterProviderId,
+  ConnectionProviderIdSchema,
+  type ConnectionProviderId,
+  ConnectionStatusSchema,
+  type ConnectionStatus,
+  AiTaskSchema,
+  type AiTask,
+  RoutingTaskSchema,
+  type RoutingTask,
   OnScreenTextStrategySchema,
   type OnScreenTextStrategy,
 } from './enums.js';
+
+// byok provider config (connections + model router)
+export {
+  TestErrorSchema,
+  type TestError,
+  ProviderConnectionDTOSchema,
+  type ProviderConnectionDTO,
+  createProviderConnectionSchema,
+  type CreateProviderConnectionInput,
+  updateProviderConnectionSchema,
+  type UpdateProviderConnectionInput,
+  connectionTestResultSchema,
+  type ConnectionTestResult,
+  ModelAssignmentDTOSchema,
+  type ModelAssignmentDTO,
+  upsertModelAssignmentSchema,
+  type UpsertModelAssignmentInput,
+  resolveModelAssignment,
+} from './provider-config.js';
 
 // project
 export {

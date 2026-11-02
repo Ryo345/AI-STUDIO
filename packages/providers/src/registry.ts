@@ -3,8 +3,11 @@
 // (ProviderConfigError); it must never silently fall back to the mock, and
 // the mock must never be loaded when a real provider is selected.
 
+import type { ScriptwriterProviderId } from '@studio/domain';
+
 import { AnthropicScriptwriter } from './anthropic.js';
 import { MockScriptwriter } from './mock.js';
+import { NvidiaNimScriptwriter } from './nvidia-nim.js';
 import { OpenAICompatibleScriptwriter } from './openai-compatible.js';
 import { ProviderConfigError, type ScriptwriterAdapter } from './types.js';
 
@@ -75,9 +78,77 @@ export function resolveScriptwriter(env: NodeJS.ProcessEnv = process.env): Scrip
       return new OpenAICompatibleScriptwriter({ baseUrl, apiKey, model, timeoutMs: providerTimeoutMs(env) });
     }
 
+    case 'nvidia-nim': {
+      const apiKey = env.NVIDIA_NIM_API_KEY?.trim() ?? '';
+      const model = env.NVIDIA_NIM_MODEL?.trim() ?? '';
+      if (!apiKey) {
+        throw new ProviderConfigError('SCRIPTWRITER_PROVIDER=nvidia-nim requires NVIDIA_NIM_API_KEY');
+      }
+      if (!model) {
+        throw new ProviderConfigError('SCRIPTWRITER_PROVIDER=nvidia-nim requires NVIDIA_NIM_MODEL');
+      }
+      return new NvidiaNimScriptwriter({
+        apiKey,
+        model,
+        baseUrl: env.NVIDIA_NIM_BASE_URL?.trim() || undefined,
+        timeoutMs: providerTimeoutMs(env),
+      });
+    }
+
     default:
       throw new ProviderConfigError(
-        `unknown SCRIPTWRITER_PROVIDER '${provider}' (expected mock | anthropic | openai-compatible)`,
+        `unknown SCRIPTWRITER_PROVIDER '${provider}' (expected mock | anthropic | openai-compatible | nvidia-nim)`,
       );
+  }
+}
+
+// ── BYOK factory ─────────────────────────────────────────────────────────
+// Per-job adapter construction with explicit, workspace-supplied credentials
+// (decrypted server-side moments earlier). This is the path the model router
+// exercises; resolveScriptwriter stays for env-only/dev operation.
+
+export interface ScriptwriterCredentials {
+  apiKey: string;
+  model: string;
+  baseUrl?: string;
+  timeoutMs: number;
+}
+
+/** Build a scriptwriter from an explicit credential set (BYOK). mock is not constructible here — it has no credentials. */
+export function createScriptwriter(
+  providerId: Exclude<ScriptwriterProviderId, 'mock'>,
+  credentials: ScriptwriterCredentials,
+): ScriptwriterAdapter {
+  const model = credentials.model.trim();
+  if (!model) {
+    throw new ProviderConfigError(`model assignment for '${providerId}' has an empty model id`);
+  }
+  switch (providerId) {
+    case 'anthropic':
+      return new AnthropicScriptwriter({
+        apiKey: credentials.apiKey,
+        model,
+        baseUrl: credentials.baseUrl,
+        timeoutMs: credentials.timeoutMs,
+      });
+    case 'openai-compatible':
+      return new OpenAICompatibleScriptwriter({
+        baseUrl: credentials.baseUrl?.trim() || '',
+        apiKey: credentials.apiKey,
+        model,
+        timeoutMs: credentials.timeoutMs,
+      });
+    case 'nvidia-nim':
+      return new NvidiaNimScriptwriter({
+        apiKey: credentials.apiKey,
+        model,
+        baseUrl: credentials.baseUrl,
+        timeoutMs: credentials.timeoutMs,
+      });
+    default:
+      // Includes 'mock' at runtime (the type excludes it, but callers can
+      // arrive with unvalidated data): the mock must never be constructible
+      // through the BYOK path.
+      throw new ProviderConfigError(`provider '${providerId as string}' cannot be constructed with credentials`);
   }
 }

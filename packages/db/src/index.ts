@@ -16,7 +16,9 @@ export {
   RowMappingError,
   mapJobRow,
   mapJobEventRow,
+  mapModelAssignmentRow,
   mapProjectRow,
+  mapProviderConnectionRow,
   mapRowsResilient,
   mapSceneRow,
   mapScriptVersionRow,
@@ -26,6 +28,7 @@ export {
 export * from './queries/projects.js';
 export * from './queries/script.js';
 export * from './queries/jobs.js';
+export * from './queries/provider-config.js';
 export * from './queries/usage.js';
 export * from './queries/workspaces.js';
 

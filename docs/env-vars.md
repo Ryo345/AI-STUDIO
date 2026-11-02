@@ -15,6 +15,16 @@ and why**.
   provider keys and the service-role key.
 - **Test** = `npm run test:int`, gated by `INT=1`.
 
+## Credential encryption (BYOK)
+
+User-supplied provider keys (settings → providers) are stored as AES-256-GCM
+envelopes (`v1.<iv>.<tag>.<ct>`). Only the worker decrypts them, per job —
+the web tier never holds the KEK and cannot read stored keys.
+
+| Variable | Read by | Required | Purpose |
+| --- | --- | --- | --- |
+| `CREDENTIAL_ENCRYPTION_KEY` | Worker, Web | always (BYOK) | Base64-encoded 32-byte KEK (`openssl rand -base64 32`). Web fails the create-connection request fast if unset; worker fails at boot. Rotating it invalidates every stored key — re-enter keys after rotation. |
+
 ## Supabase
 
 | Variable | Read by | Required | Purpose |
@@ -37,8 +47,8 @@ vice versa.
 
 | Variable | Read by | Required | Purpose |
 | --- | --- | --- | --- |
-| `SCRIPTWRITER_PROVIDER` | Worker | no (default `mock`) | `mock` \| `anthropic` \| `openai-compatible` |
-| `PROVIDER_TIMEOUT_MS` | Worker | no (default `120000`) | Per-call timeout; a timeout is a retryable job failure |
+| `SCRIPTWRITER_PROVIDER` | Worker | no (default `mock`) | `mock` \| `anthropic` \| `openai-compatible` \| `nvidia-nim` — used only when a workspace has **no** model assignment for the job's task (BYOK routing takes precedence) |
+| `PROVIDER_TIMEOUT_MS` | Worker | no (default `120000`) | Per-call timeout; a timeout is a retryable job failure. Also the default for BYOK adapter calls |
 | `MOCK_GENERATE_DELAY_MS` | Worker | no (default `0`) | Simulated latency for the mock — set e.g. `60000` to exercise cancel/heartbeat/reclaim paths without ANY credentials |
 
 ### Anthropic (when `SCRIPTWRITER_PROVIDER=anthropic`)
@@ -56,6 +66,18 @@ vice versa.
 | `OPENAI_COMPATIBLE_BASE_URL` | e.g. `https://api.openai.com/v1` or `https://openrouter.ai/api/v1` |
 | `OPENAI_COMPATIBLE_API_KEY` | API key for that gateway |
 | `OPENAI_COMPATIBLE_MODEL` | Model id the gateway offers |
+
+### NVIDIA NIM (when `SCRIPTWRITER_PROVIDER=nvidia-nim`, or as BYOK)
+
+The first BYOK provider. Workspace users connect their own NIM key in
+settings; these env vars are the no-assignment fallback for dev/self-host
+operation.
+
+| Variable | Purpose |
+| --- | --- |
+| `NVIDIA_NIM_API_KEY` | Key from build.nvidia.com (`nvapi-…`) |
+| `NVIDIA_NIM_MODEL` | Model id from the live `/models` catalog — never hard-coded in code |
+| `NVIDIA_NIM_BASE_URL` | Optional override (default `https://integrate.api.nvidia.com/v1`) — for self-hosted NIM containers |
 
 ## Worker tuning (all optional)
 

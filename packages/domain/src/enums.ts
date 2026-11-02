@@ -39,8 +39,45 @@ export type JobType = z.infer<typeof JobTypeSchema>;
 // via a dedicated ALTER TYPE migration BEFORE any code references them.
 
 // ── Providers ─────────────────────────────────────────────────────────────
-export const ScriptwriterProviderIdSchema = z.enum(['mock', 'anthropic', 'openai-compatible']);
+export const ScriptwriterProviderIdSchema = z.enum(['mock', 'anthropic', 'openai-compatible', 'nvidia-nim']);
 export type ScriptwriterProviderId = z.infer<typeof ScriptwriterProviderIdSchema>;
+
+/**
+ * Providers a workspace can hold BYOK credentials for. mock is platform-side
+ * (dev only, no key) and is deliberately excluded — BYOK is for real keys.
+ * Grows by migration + adapter together (value sets change only with code
+ * that also changes writers).
+ */
+export const ConnectionProviderIdSchema = z.enum(['anthropic', 'openai-compatible', 'nvidia-nim']);
+export type ConnectionProviderId = z.infer<typeof ConnectionProviderIdSchema>;
+
+/** Connection test lifecycle, mirrored by provider_connections.status. */
+export const ConnectionStatusSchema = z.enum(['untested', 'active', 'failed']);
+export type ConnectionStatus = z.infer<typeof ConnectionStatusSchema>;
+
+/**
+ * AI tasks the model router can route. 'default' names the workspace-wide
+ * fallback row; every other value is a concrete task a job can ask for.
+ * Only script.generate is consumed by the worker today — the rest exist so
+ * the routing surface is complete before later phases read them.
+ */
+export const AiTaskSchema = z.enum([
+  'default',
+  'script.generate',
+  'script.rewrite',
+  'research.assist',
+  'fact.check',
+  'scene.describe',
+  'video.title',
+  'video.description',
+  'seo.metadata',
+  'script.quality',
+]);
+export type AiTask = z.infer<typeof AiTaskSchema>;
+
+/** Concrete (non-fallback) tasks a worker job can request. */
+export const RoutingTaskSchema = AiTaskSchema.exclude(['default']);
+export type RoutingTask = z.infer<typeof RoutingTaskSchema>;
 
 // ── On-screen text strategy (drives mock copy + Phase 2 caption styling) ──
 export const OnScreenTextStrategySchema = z.enum(['question', 'statement', 'statistic', 'none']);

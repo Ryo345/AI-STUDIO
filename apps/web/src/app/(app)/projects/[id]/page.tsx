@@ -3,7 +3,8 @@ import { notFound, redirect } from "next/navigation";
 
 import DeleteProjectButton from "@/components/projects/DeleteProjectButton";
 import EditProjectForm from "@/components/projects/EditProjectForm";
-import { getProjectRow, listActiveJobsByProject } from "@studio/db";
+import StoryboardPanel from "@/components/projects/StoryboardPanel";
+import { getProjectRow, getProjectScript, listActiveJobsByProject } from "@studio/db";
 import type { ProjectStatus } from "@studio/domain";
 import { resolveNiche } from "@studio/niches";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -76,6 +77,10 @@ export default async function ProjectDetailPage({
   // Only pending/running jobs come back — exactly the ones worth showing.
   // listActiveJobsByProject groups by projectId; this page reads a single one.
   const activeJobs = (await listActiveJobsByProject(supabase, [id])).get(id) ?? [];
+
+  // The current storyboard: script version + scenes, or null/[] when the
+  // project has never generated (or is mid-generation). One shape to render.
+  const { version, scenes } = await getProjectScript(supabase, id);
 
   // Style ids resolve back to labels through the niche template so the
   // summary speaks the wizard's language; an id the current template no
@@ -182,14 +187,15 @@ export default async function ProjectDetailPage({
         </section>
       ) : null}
 
-      {/* M5 mounts the storyboard (script version + scenes) here. */}
-      <section className="mt-4 rounded-xl border border-dashed border-neutral-800 p-6 text-sm text-neutral-400">
-        <h2 className="text-sm font-medium text-neutral-300">Storyboard</h2>
-        <p className="mt-2">Script generation and scene editing arrive in M5.</p>
-        {project.status === "generating" ? (
-          <p className="mt-2 text-amber-300">Script generation is in progress.</p>
-        ) : null}
-      </section>
+      {/* Storyboard: current script version + editable scenes. Generate /
+          cancel is routed through the active job when one exists. */}
+      <StoryboardPanel
+        projectId={project.id}
+        version={version}
+        scenes={scenes}
+        status={project.status}
+        activeJobId={activeJobs[0]?.id ?? null}
+      />
 
       <section className="mt-4 rounded-xl border border-neutral-800 bg-neutral-900 p-6">
         <h2 className="text-sm font-medium text-neutral-300">Settings</h2>
